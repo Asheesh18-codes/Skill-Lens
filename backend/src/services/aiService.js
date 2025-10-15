@@ -3,7 +3,7 @@ import axios from 'axios';
 class AIService {
   constructor() {
     this.baseURL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-    this.timeout = 30000; // 30 seconds
+    this.timeout = 120000; // 120 seconds
   }
 
   /**
@@ -61,11 +61,15 @@ class AIService {
   async checkHealth() {
     try {
       const response = await axios.get(`${this.baseURL}/health`, {
-        timeout: 5000
+        timeout: 60000 // 60 seconds
       });
       return response.status === 200;
     } catch (error) {
-      console.error('AI Service health check failed:', error.message);
+      if (error.response) {
+        console.error('AI Service health check failed:', error.response.status, error.response.data);
+      } else {
+        console.error('AI Service health check failed:', error.message);
+      }
       return false;
     }
   }
@@ -77,7 +81,7 @@ class AIService {
   async getStatus() {
     try {
       const response = await axios.get(`${this.baseURL}/health`, {
-        timeout: 5000
+        timeout: 15000
       });
       return response.data;
     } catch (error) {

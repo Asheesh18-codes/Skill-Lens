@@ -11,7 +11,15 @@ const router = express.Router();
  * POST /api/v1/resume/upload
  * Upload and analyze resume PDF file
  */
-router.post('/upload', uploadPDF, handleUploadErrors, async (req, res, next) => {
+router.post('/upload', (req, res, next) => {
+  // Wrap multer middleware to catch async errors
+  uploadPDF(req, res, (err) => {
+    if (err) {
+      return handleUploadErrors(err, req, res, next);
+    }
+    next();
+  });
+}, async (req, res, next) => {
   try {
     // Check if file was uploaded
     if (!req.file) {
@@ -29,7 +37,9 @@ router.post('/upload', uploadPDF, handleUploadErrors, async (req, res, next) => 
         message: 'Uploaded file buffer is invalid. Please try again.'
       });
     }
-    console.log('PDF buffer length:', req.file.buffer.length);
+    
+    console.log(`📄 Processing PDF: ${req.file.originalname} (${req.file.size} bytes)`);
+    
     // Extract text from PDF using robust logic
     let resumeText;
     try {
@@ -45,8 +55,9 @@ router.post('/upload', uploadPDF, handleUploadErrors, async (req, res, next) => 
         throw new Error('Cannot find pdf parsing function');
       }
       resumeText = pdfData.text;
+      console.log(`✅ Extracted ${resumeText.length} characters from PDF`);
     } catch (pdfError) {
-      console.error('PDF parsing error:', pdfError);
+      console.error('❌ PDF parsing error:', pdfError);
       return res.status(400).json({
         success: false,
         message: 'Failed to parse PDF file. Please ensure it\'s a valid PDF document.'
@@ -62,7 +73,9 @@ router.post('/upload', uploadPDF, handleUploadErrors, async (req, res, next) => 
     }
 
     // Extract skills using AI service
+    console.log('🤖 Sending to AI service for skill extraction...');
     const skillsResult = await aiService.extractSkills(resumeText);
+    console.log('✅ Skills extracted successfully');
 
     // Prepare response data
     const responseData = {
@@ -85,6 +98,7 @@ router.post('/upload', uploadPDF, handleUploadErrors, async (req, res, next) => 
     });
 
   } catch (error) {
+    console.error('❌ Resume upload error:', error);
     next(error);
   }
 });

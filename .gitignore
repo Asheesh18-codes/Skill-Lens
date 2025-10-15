@@ -2,3 +2,7 @@
 .env
 /dist
 .DS_Store
+__pycache__/
+*.pyc
+.vscode/
+.venv/

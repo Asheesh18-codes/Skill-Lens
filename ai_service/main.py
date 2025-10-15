@@ -1,9 +1,17 @@
 import spacy
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
+import logging
+
+# Import our custom NLP engine
+from nlp_engine import create_skill_extractor, create_job_role_matcher
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -12,12 +20,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Load spaCy model (download with: python -m spacy download en_core_web_sm)
+# Initialize NLP components
 try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    print("Warning: spaCy model 'en_core_web_sm' not found. Please install with: python -m spacy download en_core_web_sm")
-    nlp = None
+    skill_extractor = create_skill_extractor()
+    job_matcher = create_job_role_matcher()
+    logger.info("NLP engine initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize NLP engine: {e}")
+    skill_extractor = None
+    job_matcher = None
 
 # Request/Response models
 class SkillExtractionRequest(BaseModel):
@@ -28,7 +39,15 @@ class SkillExtractionResponse(BaseModel):
     categories: Dict[str, List[str]]
     confidence_scores: Dict[str, float]
 
-# Predefined skill categories and keywords
+class JobMatchRequest(BaseModel):
+    skills: List[str]
+    target_role: str = None
+
+class JobMatchResponse(BaseModel):
+    suggested_roles: List[Dict[str, Any]]
+    best_fit: Optional[Dict[str, Any]] = None
+
+# Legacy skill categories for fallback
 SKILL_CATEGORIES = {
     "Programming Languages": [
         "python", "javascript", "java", "c++", "c#", "typescript", "php", "ruby", "go", "rust",
@@ -62,8 +81,14 @@ SKILL_CATEGORIES = {
 
 def extract_skills_with_spacy(text: str) -> List[str]:
     """Extract skills using spaCy NLP processing"""
-    if not nlp:
-        return []
+    # Load spaCy model if not already loaded
+    global nlp
+    if "nlp" not in globals() or nlp is None:
+        try:
+            nlp = spacy.load("en_core_web_sm")
+        except Exception as e:
+            logger.error(f"Failed to load spaCy model: {e}")
+            return []
     
     doc = nlp(text.lower())
     extracted_skills = set()
@@ -120,7 +145,7 @@ async def root():
 @app.post("/extract", response_model=SkillExtractionResponse)
 async def extract_skills(request: SkillExtractionRequest):
     """
-    Extract skills from resume text or job description
+    Extract skills from resume text or job description using advanced NLP
     
     Args:
         request: SkillExtractionRequest containing text to analyze
@@ -132,7 +157,19 @@ async def extract_skills(request: SkillExtractionRequest):
         if not request.text or len(request.text.strip()) < 10:
             raise HTTPException(status_code=400, detail="Text is too short or empty")
         
-        # Extract skills using keyword matching (more reliable)
+        # Use advanced NLP engine if available
+        if skill_extractor:
+            logger.info("Using advanced NLP engine for skill extraction")
+            result = skill_extractor.extract_skills(request.text, use_all_methods=True)
+            
+            return SkillExtractionResponse(
+                skills=result["skills"],
+                categories=result["categories"],
+                confidence_scores=result["confidence_scores"]
+            )
+        
+        # Fallback to legacy extraction method
+        logger.warning("Using fallback skill extraction method")
         categorized_skills = extract_skills_with_keywords(request.text)
         
         # Flatten all skills
@@ -146,15 +183,6 @@ async def extract_skills(request: SkillExtractionRequest):
         # Calculate confidence scores
         confidence_scores = calculate_confidence_scores(unique_skills, request.text)
         
-        # Enhance with spaCy if available
-        if nlp:
-            spacy_skills = extract_skills_with_spacy(request.text)
-            # Add high-confidence spaCy skills that aren't already found
-            for skill in spacy_skills:
-                if skill not in unique_skills and len(skill) > 2:
-                    unique_skills.append(skill)
-                    confidence_scores[skill] = 0.7  # Medium confidence for spaCy-only skills
-        
         return SkillExtractionResponse(
             skills=unique_skills,
             categories=categorized_skills,
@@ -164,14 +192,54 @@ async def extract_skills(request: SkillExtractionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Skill extraction failed: {str(e)}")
 
+@app.post("/match-job-roles", response_model=JobMatchResponse)
+async def match_job_roles(request: JobMatchRequest):
+    """
+    Match user skills to potential job roles
+    
+    Args:
+        request: JobMatchRequest containing user skills and optional target role
+    
+    Returns:
+        JobMatchResponse with suggested roles and fit analysis
+    """
+    try:
+        if not request.skills:
+            raise HTTPException(status_code=400, detail="No skills provided")
+        
+        if job_matcher:
+            # Get suggested roles
+            suggested_roles = job_matcher.suggest_best_roles(request.skills, top_n=5)
+            
+            # If target role specified, calculate specific fit
+            best_fit = None
+            if request.target_role:
+                best_fit = job_matcher.calculate_role_fit(request.skills, request.target_role)
+                best_fit["role"] = request.target_role
+            
+            return JobMatchResponse(
+                suggested_roles=suggested_roles,
+                best_fit=best_fit
+            )
+        else:
+            raise HTTPException(status_code=503, detail="Job matching service not available")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Job matching failed: {str(e)}")
+
 @app.get("/health")
 async def health_check():
     """Detailed health check with service status"""
+    nlp_engine_status = "available" if skill_extractor else "unavailable"
+    job_matcher_status = "available" if job_matcher else "unavailable"
+    
     return {
         "status": "healthy",
         "categories_loaded": len(SKILL_CATEGORIES),
         "service": "SkillLens AI Service",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "nlp_engine": nlp_engine_status,
+        "job_matcher": job_matcher_status
     }
 
 if __name__ == "__main__":

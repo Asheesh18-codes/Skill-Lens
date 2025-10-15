@@ -28,9 +28,10 @@ const upload = multer({
 export const uploadPDF = upload.single('resume');
 
 /**
- * Error handling middleware for multer
+ * Error handling middleware for multer and form parsing
  */
 export const handleUploadErrors = (error, req, res, next) => {
+  // Handle multer-specific errors
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -52,12 +53,30 @@ export const handleUploadErrors = (error, req, res, next) => {
     }
   }
   
-  if (error.message === 'Only PDF files are allowed') {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid file type. Please upload a PDF file.'
-    });
+  // Handle busboy/multipart form errors
+  if (error && error.message) {
+    if (error.message.includes('Unexpected end of form')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Upload interrupted or incomplete. Please try uploading again.'
+      });
+    }
+    
+    if (error.message.includes('Missing boundary')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid form data. Please ensure you are uploading a file correctly.'
+      });
+    }
+    
+    if (error.message === 'Only PDF files are allowed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Please upload a PDF file.'
+      });
+    }
   }
   
+  // Pass to next error handler if not handled
   next(error);
 };
