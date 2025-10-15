@@ -1,8 +1,49 @@
-/node_modules
-.env
-/dist
+# Root-level common ignores
+node_modules/
+dist/
 .DS_Store
-__pycache__/
-*.pyc
 .vscode/
 .venv/
+.env
+.env.*
+*.log
+*.tmp
+
+# Backend (Node.js)
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/.env
+backend/.env.*
+backend/npm-debug.log*
+backend/yarn-error.log*
+
+# Frontend (React/Vite/Next)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.env
+frontend/.env.*
+frontend/npm-debug.log*
+frontend/yarn-error.log*
+
+# Python (ai_service)
+__pycache__/
+*.py[cod]
+*.pyo
+ai_service/__pycache__/
+ai_service/.venv/
+ai_service/.env
+ai_service/.env.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage*
+
+# OS / editor junk
+Thumbs.db
+.idea/
+.sass-cache/
+*.swp
