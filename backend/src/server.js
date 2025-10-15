@@ -4,9 +4,11 @@ const PORT = process.env.PORT || 3001;
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 SkillLens Backend API server running on port ${PORT}`);
+  console.log(`🚀 SkillLens AI Career Coach API running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`📄 Resume upload: http://localhost:${PORT}/api/v1/resume/upload`);
+  console.log(`💬 Chat endpoint: http://localhost:${PORT}/api/v1/chat/message`);
+  console.log(`🗺️ Roadmap endpoint: http://localhost:${PORT}/api/v1/chat/roadmap`);
   console.log(`🤖 AI Service URL: ${process.env.AI_SERVICE_URL || 'http://localhost:8000'}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

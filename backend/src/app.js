@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 
 // Import routes
 import resumeRoutes from './routes/resume.js';
+import chatRoutes from './routes/chat.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -54,6 +55,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/v1/resume', resumeRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -8,6 +8,7 @@ import logging
 
 # Import our custom NLP engine
 from nlp_engine import create_skill_extractor, create_job_role_matcher
+from career_advisor import career_advisor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +47,22 @@ class JobMatchRequest(BaseModel):
 class JobMatchResponse(BaseModel):
     suggested_roles: List[Dict[str, Any]]
     best_fit: Optional[Dict[str, Any]] = None
+
+# Chat and Roadmap models
+class ChatRequest(BaseModel):
+    message: str
+    history: List[Dict[str, str]] = []
+    userProfile: Optional[Dict[str, Any]] = None
+
+class ChatResponse(BaseModel):
+    message: str
+    data: Optional[Dict[str, Any]] = None
+    suggestions: List[str] = []
+
+class RoadmapRequest(BaseModel):
+    targetRole: str
+    currentSkills: List[str] = []
+    timeline: str = "6 months"
 
 # Legacy skill categories for fallback
 SKILL_CATEGORIES = {
@@ -227,19 +244,75 @@ async def match_job_roles(request: JobMatchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Job matching failed: {str(e)}")
 
+@app.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
+    """
+    Chat with AI Career Coach
+    
+    Args:
+        request: ChatRequest with message, history, and user profile
+    
+    Returns:
+        ChatResponse with AI's message, structured data, and suggestions
+    """
+    try:
+        logger.info(f"💬 Chat request: '{request.message[:50]}...'")
+        
+        response = await career_advisor.generate_chat_response(
+            message=request.message,
+            history=request.history,
+            user_profile=request.userProfile
+        )
+        
+        logger.info(f"✅ Chat response generated")
+        return ChatResponse(**response)
+    
+    except Exception as e:
+        logger.error(f"❌ Chat error: {e}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+@app.post("/roadmap")
+async def generate_roadmap(request: RoadmapRequest):
+    """
+    Generate personalized career roadmap
+    
+    Args:
+        request: RoadmapRequest with target role, current skills, and timeline
+    
+    Returns:
+        Detailed career roadmap with phases, resources, and milestones
+    """
+    try:
+        logger.info(f"🗺️ Roadmap request for: {request.targetRole}")
+        
+        roadmap = await career_advisor.generate_career_roadmap(
+            target_role=request.targetRole,
+            current_skills=request.currentSkills,
+            timeline=request.timeline
+        )
+        
+        logger.info(f"✅ Roadmap generated for {request.targetRole}")
+        return roadmap
+    
+    except Exception as e:
+        logger.error(f"❌ Roadmap error: {e}")
+        raise HTTPException(status_code=500, detail=f"Roadmap generation failed: {str(e)}")
+
 @app.get("/health")
 async def health_check():
     """Detailed health check with service status"""
     nlp_engine_status = "available" if skill_extractor else "unavailable"
     job_matcher_status = "available" if job_matcher else "unavailable"
+    career_advisor_status = "available" if career_advisor else "unavailable"
     
     return {
         "status": "healthy",
         "categories_loaded": len(SKILL_CATEGORIES),
-        "service": "SkillLens AI Service",
-        "version": "1.0.0",
+        "service": "SkillLens AI Career Coach",
+        "version": "2.0.0",
         "nlp_engine": nlp_engine_status,
-        "job_matcher": job_matcher_status
+        "job_matcher": job_matcher_status,
+        "career_advisor": career_advisor_status
     }
 
 if __name__ == "__main__":
