@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 
 interface Message {
@@ -29,10 +31,9 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, messagesEndRef]);
 
   useEffect(() => {
-    // Create session on mount
     createSession();
   }, []);
 
@@ -46,7 +47,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
       if (response.data.success) {
         setSessionId(response.data.data.sessionId);
         
-        // Add welcome message
         setMessages([{
           role: 'assistant',
           content: "👋 Hi! I'm your AI Career Coach. I can help you:\n\n• Create personalized learning roadmaps\n• Identify skill gaps for your target role\n• Recommend courses and resources\n• Suggest hands-on projects\n• Provide career guidance\n\nYou can start by telling me about your career goals, or upload your resume to analyze your current skills!",
@@ -107,55 +107,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
     }
   };
 
-  const generateRoadmap = async (targetRole: string) => {
-    setIsLoading(true);
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/v1/chat/roadmap`, {
-        sessionId,
-        targetRole,
-        currentSkills: userSkills,
-        timeline: '6 months'
-      });
-
-      if (response.data.success) {
-        const roadmap = response.data.data;
-        
-        // Add roadmap message
-        const roadmapMessage: Message = {
-          role: 'assistant',
-          content: `🗺️ I've generated a comprehensive ${roadmap.timeline} roadmap for becoming a **${roadmap.role}**!\n\nCheck out the detailed roadmap below with learning phases, resources, and milestones.`,
-          timestamp: new Date().toISOString(),
-          data: roadmap
-        };
-        
-        setMessages(prev => [...prev, roadmapMessage]);
-        
-        if (onRoadmapGenerated) {
-          onRoadmapGenerated(roadmap);
-        }
-      }
-    } catch (error: any) {
-      console.error('Roadmap error:', error);
-      
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: `Sorry, I couldn't generate the roadmap: ${error.response?.data?.message || error.message}`,
-        timestamp: new Date().toISOString()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Note: generateRoadmap can be triggered via chat messages in future updates
-  // For now, roadmaps are generated through the chat interface
-
   const handleSuggestionClick = (suggestion: string) => {
     if (suggestion.toLowerCase().includes('roadmap')) {
-      // Prompt for target role
       sendMessage("I'd like to generate a career roadmap");
     } else if (suggestion.toLowerCase().includes('resources')) {
       sendMessage("Can you recommend learning resources?");
@@ -174,45 +127,84 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
+    <div className="flex flex-col h-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-t-lg">
-        <h2 className="text-xl font-bold">🤖 AI Career Coach</h2>
-        <p className="text-sm opacity-90">Your personal guide to career growth</p>
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white p-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <span className="text-2xl">🤖</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">AI Career Coach</h2>
+            <p className="text-sm text-white/90 font-medium">Your personal guide to career growth</p>
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: '500px' }}>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white" style={{ maxHeight: '500px' }}>
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}
           >
             <div
-              className={`max-w-[80%] rounded-lg p-3 ${
+              className={`max-w-[85%] ${
                 message.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  ? 'message-user'
+                  : 'message-assistant prose-chat'
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <div className="whitespace-pre-wrap leading-relaxed" style={{ lineHeight: '1.7' }}>
+                {message.role === 'assistant' ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children, ...rest }: any) => (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="prose-link"
+                          aria-label={typeof children === 'string' ? children : href}
+                          {...rest}
+                        >
+                          {children && children.length > 0 ? children : href}
+                        </a>
+                      )
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                ) : (
+                  message.content
+                )}
+              </div>
               
               {/* Render roadmap data if present */}
               {message.data?.phases && (
-                <div className="mt-3 p-3 bg-white rounded-lg text-gray-900 text-sm">
-                  <p className="font-semibold mb-2">📚 Learning Phases:</p>
-                  <ul className="space-y-1">
+                <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                  <p className="font-semibold mb-3 text-indigo-900 flex items-center">
+                    <span className="mr-2">📚</span>
+                    Learning Phases
+                  </p>
+                  <ul className="space-y-2 text-sm">
                     {message.data.phases.map((phase: any, idx: number) => (
-                      <li key={idx} className="flex items-start">
-                        <span className="font-medium mr-2">{idx + 1}.</span>
-                        <span>{phase.phase} ({phase.duration})</span>
+                      <li key={idx} className="flex items-start text-gray-700">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-indigo-600 text-white rounded-full text-xs font-bold mr-3 flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <span className="font-semibold">{phase.phase}</span>
+                          <span className="text-indigo-600 ml-2">({phase.duration})</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
               
-              <p className="text-xs mt-1 opacity-70">
+              <p className={`text-xs mt-3 font-medium ${message.role === 'user' ? 'text-white/70' : 'text-gray-400'}`}>
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>
             </div>
@@ -221,11 +213,11 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
         
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-3">
+            <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-md border border-gray-100">
               <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="loading-dot"></div>
+                <div className="loading-dot" style={{ animationDelay: '0.15s' }}></div>
+                <div className="loading-dot" style={{ animationDelay: '0.3s' }}></div>
               </div>
             </div>
           </div>
@@ -236,14 +228,14 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
 
       {/* Suggestions */}
       {suggestions.length > 0 && (
-        <div className="px-4 py-2 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-2">Quick actions:</p>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">Quick actions</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm hover:bg-blue-100 transition-colors"
+                className="px-4 py-2 bg-white text-indigo-600 rounded-xl text-sm font-medium hover:bg-indigo-50 transition-all duration-200 border border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md"
               >
                 {suggestion}
               </button>
@@ -253,44 +245,49 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
       )}
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex space-x-2">
+      <div className="border-t border-gray-200 p-6 bg-white">
+        <div className="flex space-x-3">
           <input
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask me anything about your career..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input-primary flex-1"
             disabled={isLoading}
           />
           <button
             onClick={() => sendMessage()}
             disabled={isLoading || !inputMessage.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:transform-none"
           >
-            Send
+            <span className="flex items-center space-x-2">
+              <span>Send</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </span>
           </button>
         </div>
         
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={() => sendMessage("What should I learn to become a Frontend Developer?")}
-            className="text-xs px-3 py-1 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200"
+            className="text-xs px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-700 rounded-lg font-medium hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 border border-indigo-100"
           >
-            Frontend Developer path
+            💻 Frontend Developer path
           </button>
           <button
             onClick={() => sendMessage("Create a Backend Developer roadmap")}
-            className="text-xs px-3 py-1 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200"
+            className="text-xs px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 rounded-lg font-medium hover:from-purple-100 hover:to-pink-100 transition-all duration-200 border border-purple-100"
           >
-            Backend Developer path
+            ⚙️ Backend Developer path
           </button>
           <button
             onClick={() => sendMessage("What projects should I build?")}
-            className="text-xs px-3 py-1 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200"
+            className="text-xs px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-lg font-medium hover:from-green-100 hover:to-emerald-100 transition-all duration-200 border border-green-100"
           >
-            Project ideas
+            🚀 Project ideas
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@ import spacy
 import re
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 import logging
 
@@ -52,7 +52,10 @@ class JobMatchResponse(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: List[Dict[str, str]] = []
-    userProfile: Optional[Dict[str, Any]] = None
+    user_profile: Optional[Dict[str, Any]] = Field(None, alias='userProfile')
+
+    class Config:
+        populate_by_name = True
 
 class ChatResponse(BaseModel):
     message: str
@@ -60,9 +63,12 @@ class ChatResponse(BaseModel):
     suggestions: List[str] = []
 
 class RoadmapRequest(BaseModel):
-    targetRole: str
-    currentSkills: List[str] = []
+    target_role: str = Field(..., alias='targetRole')
+    current_skills: List[str] = Field([], alias='currentSkills')
     timeline: str = "6 months"
+
+    class Config:
+        populate_by_name = True
 
 # Legacy skill categories for fallback
 SKILL_CATEGORIES = {
@@ -261,7 +267,7 @@ async def chat_endpoint(request: ChatRequest):
         response = await career_advisor.generate_chat_response(
             message=request.message,
             history=request.history,
-            user_profile=request.userProfile
+            user_profile=request.user_profile
         )
         
         logger.info(f"✅ Chat response generated")
@@ -283,15 +289,15 @@ async def generate_roadmap(request: RoadmapRequest):
         Detailed career roadmap with phases, resources, and milestones
     """
     try:
-        logger.info(f"🗺️ Roadmap request for: {request.targetRole}")
+        logger.info(f"🗺️ Roadmap request for: {request.target_role}")
         
         roadmap = await career_advisor.generate_career_roadmap(
-            target_role=request.targetRole,
-            current_skills=request.currentSkills,
+            target_role=request.target_role,
+            current_skills=request.current_skills,
             timeline=request.timeline
         )
         
-        logger.info(f"✅ Roadmap generated for {request.targetRole}")
+        logger.info(f"✅ Roadmap generated for {request.target_role}")
         return roadmap
     
     except Exception as e:

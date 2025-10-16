@@ -39,9 +39,15 @@ router.post('/message', async (req, res, next) => {
     console.log(`💬 Chat message from session ${session.id}: "${message}"`);
 
     // Generate AI response
+    // Format history to only include role and content (required by Pydantic model)
+    const formattedHistory = session.history.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
     const aiResponse = await aiService.generateChatResponse({
       message,
-      history: session.history,
+      history: formattedHistory,
       userProfile: session.userProfile
     });
 
