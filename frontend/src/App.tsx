@@ -22,15 +22,11 @@ function App() {
   const [view, setView] = useState<'upload' | 'chat' | 'roadmap'>('chat');
   const [roadmap, setRoadmap] = useState<any>(null);
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
-
+  // Enforce permanent dark theme
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    if (!root.classList.contains('dark')) root.classList.add('dark');
+  }, []);
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
@@ -87,10 +83,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen flex flex-col bg-slate-950">
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm dark:shadow-none border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="text-center mx-auto">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">🎯 SkillLens AI Career Coach</h1>
@@ -98,23 +94,17 @@ function App() {
               Your personalized AI mentor for career growth and learning
             </p>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="ml-4 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-              aria-label="Toggle dark mode"
-            >
-              {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
-            </button>
+            {/* Dark mode is permanent; toggle removed */}
           </div>
           
           {/* Navigation */}
-          <div className="mt-4 flex justify-center space-x-4">
+          <div className="mt-3 flex justify-center space-x-4">
             <button
               onClick={() => setView('chat')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 view === 'chat'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
               }`}
             >
               💬 Career Coach
@@ -123,8 +113,8 @@ function App() {
               onClick={() => setView('upload')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 view === 'upload'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
               }`}
             >
               📄 Analyze Resume
@@ -134,8 +124,8 @@ function App() {
                 onClick={() => setView('roadmap')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   view === 'roadmap'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
                 }`}
               >
                 🗺️ My Roadmap
@@ -146,14 +136,15 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={view === 'chat' ? 'flex-1' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         {/* System Status */}
-        <SystemStatus />
+        {view !== 'chat' && <SystemStatus />}
 
         {/* Chat View */}
         {view === 'chat' && (
-          <div className="max-w-6xl mx-auto">
-            <Chatbot 
+          <div className="w-full h-full">
+            <Chatbot
+              fullScreen
               userSkills={extractedSkills}
               onRoadmapGenerated={handleRoadmapGenerated}
             />
@@ -340,13 +331,15 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-gray-500 dark:text-slate-400 text-sm">
-            <p>Powered by AI • Built with React & FastAPI</p>
+      {view !== 'chat' && (
+        <footer className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 mt-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center text-gray-500 dark:text-slate-400 text-sm">
+              <p>Powered by AI • Built with React & FastAPI</p>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

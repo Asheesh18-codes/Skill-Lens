@@ -13,11 +13,12 @@ interface Message {
 interface ChatbotProps {
   userSkills?: string[];
   onRoadmapGenerated?: (roadmap: any) => void;
+  fullScreen?: boolean; // when true, fill available height (App provides a full-height container)
 }
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated, fullScreen = false }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -193,9 +194,16 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
   };
 
   return (
-    <div className="flex flex-col h-[80vh] lg:h-[82vh] bg-bg-primary dark:bg-slate-900 rounded-2xl shadow-xl border border-border overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-border bg-white/80 backdrop-blur dark:bg-slate-900/60">
+    <div
+      className={
+        `flex flex-col ${fullScreen ? 'h-full' : 'h-[80vh] lg:h-[82vh] rounded-2xl'} ` +
+        'bg-bg-primary dark:bg-slate-900 ' +
+        (fullScreen ? '' : 'shadow-xl border border-border ') +
+        'overflow-hidden'
+      }
+    >
+  {/* Header */}
+  <div className="px-6 py-4 border-b border-border bg-slate-900/80 backdrop-blur">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -210,7 +218,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
       </div>
 
       {/* Messages */}
-  <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-bg-secondary dark:bg-slate-900/60" style={{ maxHeight: '100%' }}>
+  <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-900/60" style={{ maxHeight: '100%' }}>
         {messages.map((message, index) => (
           <div
             key={index}
@@ -367,7 +375,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
 
       {/* Suggestions */}
       {suggestions.length > 0 && (
-        <div className="px-6 py-4 bg-bg-tertiary dark:bg-slate-900/40 border-t border-border">
+  <div className="px-6 py-4 bg-slate-900/40 border-t border-border">
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-3 uppercase tracking-wide">Quick actions</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((suggestion, index) => (
@@ -384,7 +392,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userSkills = [], onRoadmapGenerated }
       )}
 
       {/* Input */}
-      <div className="border-t border-border p-6 bg-white dark:bg-slate-900">
+  <div className="border-t border-border p-6 bg-slate-900">
         <div className="flex space-x-3">
           <label className="inline-flex items-center px-3 py-3 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-medium border border-border hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
             <input
