@@ -13,6 +13,34 @@ export interface AnalysisResult {
   confidence_scores: { [skill: string]: number };
 }
 
+export interface ATSBreakdown {
+  sections: number;
+  keywords: number;
+  formatting: number;
+  impact: number;
+  quantification: number;
+  contact: number;
+}
+
+export interface ATSMeta {
+  skillsCount: number;
+  categories: string[];
+  avgConfidence: number;
+}
+
+export interface ATSResult {
+  score: number;
+  breakdown: ATSBreakdown;
+  suggestions: string[];
+  meta: ATSMeta;
+  version: string;
+}
+
+export interface ResumeSummary {
+  resumeSummary: string;
+  improvements: string; // concise combined suggestions line
+}
+
 export interface FileInfo {
   originalName: string;
   size: number;
@@ -31,6 +59,8 @@ export interface UploadResponse {
     file: FileInfo;
     extractedText: ExtractedText;
     analysis: AnalysisResult;
+    ats?: ATSResult;
+    summary?: ResumeSummary;
   };
 }
 

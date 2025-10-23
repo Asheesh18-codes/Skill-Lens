@@ -30,14 +30,25 @@
   --warning-500: #f59e0b;
   --warning-600: #d97706;
   
-  /* Semantic Colors */
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --border-color: #e5e7eb;
+  /* Semantic Colors (Light) */
+  --text-primary: #1f2937; /* slate-800 */
+  --text-secondary: #4b5563; /* slate-600 */
+  --text-tertiary: #6b7280; /* slate-500 */
+  --bg-primary: #ffffff; /* white */
+  --bg-secondary: #f8fafc; /* slate-50 */
+  --bg-tertiary: #f1f5f9; /* slate-100 */
+  --border-color: #e2e8f0; /* slate-200 */
+}
+
+/* Dark theme variables */
+.dark :root, .dark body {
+  --text-primary: #e5e7eb; /* slate-200 */
+  --text-secondary: #cbd5e1; /* slate-300 */
+  --text-tertiary: #94a3b8; /* slate-400 */
+  --bg-primary: #0b1324; /* custom deep slate */
+  --bg-secondary: #0f172a; /* slate-900 */
+  --bg-tertiary: #111827; /* gray-900 */
+  --border-color: #334155; /* slate-600 */
 }
 
 @layer base {
@@ -193,8 +204,8 @@ code {
   
   /* Message styles for chat */
   .message-user {
-    background-image: linear-gradient(to bottom right, #4f46e5, #7c3aed);
-    color: #ffffff;
+    background: linear-gradient(to bottom right, #334155, #1f2937); /* slate-700 -> slate-800 */
+    color: #f8fafc;
     border-radius: 1rem;
     border-bottom-right-radius: 0.125rem;
     padding: 0.75rem 1rem;
@@ -202,12 +213,12 @@ code {
   }
   
   .message-assistant {
-    background: #ffffff;
-    color: #111827;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     border-radius: 1rem;
     border-bottom-left-radius: 0.125rem;
     padding: 0.75rem 1rem;
-    border: 1px solid #f3f4f6;
+    border: 1px solid var(--border-color);
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
   
@@ -215,14 +226,14 @@ code {
   .input-primary {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--border-color);
     border-radius: 0.75rem;
     outline: none;
     transition: all 200ms;
   }
   .input-primary:focus {
-    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.15);
-    border-color: #6366f1;
+    box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.2); /* slate-400 */
+    border-color: #94a3b8; /* slate-400 */
   }
   
   /* Loading animation */
@@ -272,9 +283,7 @@ code {
 }
 
 /* Markdown-like content styling for AI responses */
-.prose-chat {
-  color: #111827;
-}
+.prose-chat { color: var(--text-primary); }
 
 .prose-chat h1,
 .prose-chat h2,
@@ -283,7 +292,7 @@ code {
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .prose-chat h1 {
@@ -318,38 +327,38 @@ code {
 }
 
 .prose-chat code {
-  background: #f3f4f6;
+  background: rgba(148, 163, 184, 0.15); /* slate-400/15 */
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
-  color: #4f46e5;
+  color: #475569; /* slate-600 */
 }
 
 .prose-chat strong {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .prose-chat a {
-  color: #4f46e5;
+  color: #3b82f6; /* blue-500 */
   text-decoration: underline;
 }
 .prose-chat a:hover {
-  color: #4338ca;
+  color: #2563eb; /* blue-600 */
 }
 
 /* --- GitHub-like Prose Enhancements --- */
 .prose-chat blockquote {
-  border-left: 4px solid #e5e7eb;
+  border-left: 4px solid var(--border-color);
   padding-left: 1rem;
-  color: #4b5563;
-  background: #f9fafb;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
   border-radius: 0.25rem;
 }
 
 .prose-chat hr {
   border: 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
   margin: 1rem 0;
 }
 
@@ -362,16 +371,16 @@ code {
 }
 .prose-chat th,
 .prose-chat td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 .prose-chat thead th {
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
   font-weight: 600;
 }
 .prose-chat tbody tr:nth-child(odd) {
-  background: #fafafa;
+  background: rgba(148,163,184,0.08);
 }
 
 /* Task lists */
@@ -404,3 +413,36 @@ code {
 .prose-chat a {
   word-break: break-word;
 }
+
+/* ---- Global Dark Mode Overrides for common Tailwind classes ---- */
+.dark .bg-white { background-color: var(--bg-primary) !important; }
+.dark .bg-gray-50 { background-color: var(--bg-secondary) !important; }
+.dark .bg-gray-100 { background-color: var(--bg-tertiary) !important; }
+.dark .border-gray-200 { border-color: var(--border-color) !important; }
+.dark .border-gray-100 { border-color: var(--border-color) !important; }
+.dark .text-gray-900 { color: var(--text-primary) !important; }
+.dark .text-gray-700 { color: var(--text-primary) !important; }
+.dark .text-gray-600 { color: var(--text-secondary) !important; }
+.dark .text-gray-500 { color: var(--text-tertiary) !important; }
+.dark .text-black { color: var(--text-primary) !important; }
+.dark .bg-blue-100 { background-color: rgba(59,130,246,0.25) !important; }
+.dark .text-blue-800 { color: #93c5fd !important; }
+.dark .bg-indigo-50 { background-color: rgba(99,102,241,0.12) !important; }
+.dark .border-indigo-200 { border-color: rgba(99,102,241,0.35) !important; }
+.dark .bg-green-50 { background-color: rgba(16,185,129,0.12) !important; }
+.dark .text-green-700 { color: #6ee7b7 !important; }
+.dark .bg-emerald-50 { background-color: rgba(16,185,129,0.12) !important; }
+.dark .bg-yellow-50 { background-color: rgba(245,158,11,0.12) !important; }
+
+/* Components: dark variants */
+.dark .card { background: var(--bg-primary) !important; border-color: var(--border-color) !important; }
+.dark .btn-primary { background-image: linear-gradient(to right, #334155, #1f2937) !important; color: #f8fafc !important; }
+.dark .btn-primary:hover { background-image: linear-gradient(to right, #1f2937, #0f172a) !important; }
+.dark .btn-secondary { background: var(--bg-primary) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+.dark .btn-secondary:hover { background: var(--bg-tertiary) !important; }
+
+/* Skill badges: adjust for dark contrast */
+.dark .skill-badge.high-confidence { background: rgba(16,185,129,0.12); color: #a7f3d0; border-color: rgba(16,185,129,0.35); }
+.dark .skill-badge.medium-confidence { background: rgba(245,158,11,0.12); color: #fde68a; border-color: rgba(245,158,11,0.35); }
+.dark .skill-badge.low-confidence { background: rgba(244,63,94,0.12); color: #fecdd3; border-color: rgba(244,63,94,0.35); }
+.dark .skill-badge.default { background: rgba(148,163,184,0.15); color: #e5e7eb; border-color: rgba(148,163,184,0.35); }

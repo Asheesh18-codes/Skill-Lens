@@ -4,6 +4,8 @@ const require = createRequire(import.meta.url);
 const pdf = require('pdf-parse');
 import aiService from '../services/aiService.js';
 import { uploadPDF, handleUploadErrors } from '../middleware/upload.js';
+import { ensureSession, updateUserProfile, getSession } from '../services/sessionStore.js';
+import { scoreResume, generateResumeSummary, summarizeImprovements } from '../services/atsScorer.js';
 
 const router = express.Router();
 
@@ -21,6 +23,7 @@ router.post('/upload', (req, res, next) => {
   });
 }, async (req, res, next) => {
   try {
+    const { sessionId } = req.query;
     // Check if file was uploaded
     if (!req.file) {
       return res.status(400).json({
@@ -77,6 +80,13 @@ router.post('/upload', (req, res, next) => {
     const skillsResult = await aiService.extractSkills(resumeText);
     console.log('✅ Skills extracted successfully');
 
+    // Compute ATS-style score
+    const ats = scoreResume(resumeText, skillsResult.data);
+    const summary = {
+      resumeSummary: generateResumeSummary(skillsResult.data, ats),
+      improvements: summarizeImprovements(ats)
+    };
+
     // Prepare response data
     const responseData = {
       file: {
@@ -88,8 +98,44 @@ router.post('/upload', (req, res, next) => {
         length: resumeText.length,
         preview: resumeText.substring(0, 200) + '...'
       },
-      analysis: skillsResult.data
+      analysis: skillsResult.data,
+      ats,
+      summary
     };
+
+    // If sessionId provided, merge extracted skills into session profile
+    let updatedSession = null;
+    if (sessionId) {
+      const currentSession = ensureSession(sessionId);
+      const currentSkills = Array.isArray(currentSession.userProfile?.skills)
+        ? currentSession.userProfile.skills
+        : [];
+      const extractedSkills = Array.isArray(skillsResult.data?.skills)
+        ? skillsResult.data.skills
+        : [];
+      // Merge and de-duplicate skills (case-insensitive)
+      const merged = Array.from(
+        new Map(
+          [...currentSkills, ...extractedSkills].map(s => [String(s).toLowerCase(), String(s)])
+        ).values()
+      );
+
+      updatedSession = updateUserProfile(currentSession.id, {
+        skills: merged,
+        resume: {
+          uploadedAt: new Date().toISOString(),
+          fileName: req.file.originalname,
+          textPreview: resumeText.substring(0, 500),
+          categories: skillsResult.data?.categories || {},
+          confidence: skillsResult.data?.confidence_scores || {}
+        }
+      });
+
+      responseData.session = {
+        id: updatedSession.id,
+        userProfile: updatedSession.userProfile
+      };
+    }
 
     res.status(200).json({
       success: true,
@@ -118,14 +164,21 @@ router.post('/analyze-text', async (req, res, next) => {
       });
     }
 
-    // Extract skills using AI service
+  // Extract skills using AI service
     const skillsResult = await aiService.extractSkills(text);
+    const ats = scoreResume(text, skillsResult.data);
+    const summary = {
+      resumeSummary: generateResumeSummary(skillsResult.data, ats),
+      improvements: summarizeImprovements(ats)
+    };
 
     res.status(200).json({
       success: true,
       message: 'Text analyzed successfully',
       data: {
         analysis: skillsResult.data,
+        ats,
+        summary,
         textStats: {
           length: text.length,
           wordCount: text.split(/\s+/).length

@@ -1,10 +1,16 @@
 import express from 'express';
 import aiService from '../services/aiService.js';
+import {
+  ensureSession,
+  appendHistory,
+  updateUserProfile,
+  getSession,
+  deleteSession
+} from '../services/sessionStore.js';
 
 const router = express.Router();
 
-// In-memory chat sessions (in production, use Redis)
-const chatSessions = new Map();
+// Sessions are managed via sessionStore service now
 
 /**
  * POST /api/v1/chat/message
@@ -22,15 +28,10 @@ router.post('/message', async (req, res, next) => {
     }
 
     // Get or create session
-    let session = chatSessions.get(sessionId) || {
-      id: sessionId || `session_${Date.now()}`,
-      history: [],
-      userProfile: userProfile || {},
-      createdAt: new Date().toISOString()
-    };
+    let session = ensureSession(sessionId, userProfile || {});
 
     // Add user message to history
-    session.history.push({
+    appendHistory(session.id, {
       role: 'user',
       content: message,
       timestamp: new Date().toISOString()
@@ -52,15 +53,14 @@ router.post('/message', async (req, res, next) => {
     });
 
     // Add AI response to history
-    session.history.push({
+    appendHistory(session.id, {
       role: 'assistant',
       content: aiResponse.message,
       data: aiResponse.data,
       timestamp: new Date().toISOString()
     });
 
-    // Update session
-    chatSessions.set(session.id, session);
+    // Optionally update profile with any inferred data in future
 
     res.status(200).json({
       success: true,
@@ -128,7 +128,7 @@ router.post('/roadmap', async (req, res, next) => {
  */
 router.get('/history/:sessionId', (req, res) => {
   const { sessionId } = req.params;
-  const session = chatSessions.get(sessionId);
+  const session = getSession(sessionId);
 
   if (!session) {
     return res.status(404).json({
@@ -168,7 +168,7 @@ router.post('/session', (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  chatSessions.set(sessionId, session);
+  // Persist any changes (noop here)
 
   console.log(`✨ New chat session created: ${sessionId}`);
 
@@ -188,8 +188,7 @@ router.post('/session', (req, res) => {
 router.delete('/session/:sessionId', (req, res) => {
   const { sessionId } = req.params;
   
-  if (chatSessions.has(sessionId)) {
-    chatSessions.delete(sessionId);
+  if (deleteSession(sessionId)) {
     console.log(`🗑️ Session deleted: ${sessionId}`);
     
     return res.status(200).json({
